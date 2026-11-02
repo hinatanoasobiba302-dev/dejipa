@@ -1,0 +1,273 @@
+<title>論理回路の基本ゲート</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: explanation, a gate picker with a live circuit diagram, then a truth table. */
+:root {
+  --bg: #f6f7f4;
+  --fg: #1c2024;
+  --muted: #5f656d;
+  --accent: #0f7b6c;
+  --accent-soft: #d5ece7;
+  --off: #e6e8e3;
+  --wire-off: #9aa1a8;
+  --wire-on: #e0a100;
+  --line: #d3d6cf;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15181a;
+    --fg: #e9ece8;
+    --muted: #9ba3a9;
+    --accent: #5fcfb9;
+    --accent-soft: #1d3a35;
+    --off: #22272a;
+    --wire-off: #5d656c;
+    --wire-on: #ffc53d;
+    --line: #333a3e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15181a;
+  --fg: #e9ece8;
+  --muted: #9ba3a9;
+  --accent: #5fcfb9;
+  --accent-soft: #1d3a35;
+  --off: #22272a;
+  --wire-off: #5d656c;
+  --wire-on: #ffc53d;
+  --line: #333a3e;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Noto Sans JP", system-ui, sans-serif;
+  line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
+h1 { font-size: 1.6rem; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.1rem; margin: 0 0 6px; }
+p { margin: 0; max-width: 65ch; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+.card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.toggles { display: flex; flex-wrap: wrap; gap: 10px; }
+.switch {
+  appearance: none;
+  font: inherit;
+  color: var(--fg);
+  background: var(--off);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 18px;
+  cursor: pointer;
+  min-width: 96px;
+  font-weight: 700;
+}
+.switch[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.gates { display: flex; flex-wrap: wrap; gap: 8px; }
+.gate-btn {
+  appearance: none;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.gate-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.switch:focus-visible, .gate-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.diagram { width: 100%; max-width: 420px; height: auto; display: block; margin: 0 auto; }
+.diagram .wire { stroke: var(--wire-off); stroke-width: 3; fill: none; transition: stroke 0.15s ease; }
+.diagram .wire.on { stroke: var(--wire-on); }
+.diagram .body { fill: var(--off); stroke: var(--fg); stroke-width: 2; }
+.diagram .label { fill: var(--fg); font-size: 15px; font-weight: 700; text-anchor: middle; }
+.diagram .small { fill: var(--muted); font-size: 12px; text-anchor: middle; }
+.result { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; }
+.result .out { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.result .rule { overflow-wrap: anywhere; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: center; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+tr.current td { background: var(--accent-soft); font-weight: 700; }
+</style>
+
+<main>
+  <header>
+    <h1>論理回路の基本ゲート</h1>
+    <p>コンピュータの回路は「入力が0か1か」だけで動いています。入力AとBのスイッチを切り替えて、ゲートごとに出力がどう変わるかを確かめましょう。</p>
+  </header>
+
+  <section class="card" aria-labelledby="input-title">
+    <h2 id="input-title">1. 入力を決める</h2>
+    <p class="muted">オン（1）とオフ（0）を切り替えます。</p>
+    <div class="toggles">
+      <button type="button" class="switch" id="sw-a" aria-pressed="false">A = 0</button>
+      <button type="button" class="switch" id="sw-b" aria-pressed="false">B = 0</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="gate-title">
+    <h2 id="gate-title">2. ゲートを選ぶ</h2>
+    <div class="gates" id="gates" role="group" aria-label="ゲートの種類"></div>
+    <svg class="diagram" id="diagram" viewBox="0 0 360 200" role="img" aria-label="選択中のゲートの回路図"></svg>
+    <div class="result">
+      <div>
+        <div class="muted">出力 Q</div>
+        <div class="out" id="out">0</div>
+      </div>
+      <div class="rule muted" id="rule"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="table-title">
+    <h2 id="table-title">3. 真理値表</h2>
+    <p class="muted">すべての入力の組み合わせと出力を並べたものです。今の入力に当たる行が強調されます。</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">A</th><th scope="col">B</th><th scope="col" id="col-head">Q</th></tr>
+        </thead>
+        <tbody id="truth-body"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var gates = {
+    AND:  { fn: function (a, b) { return a & b; },       rule: "両方が1のときだけ1" },
+    OR:   { fn: function (a, b) { return a | b; },       rule: "どちらかが1なら1" },
+    NOT:  { fn: function (a, b) { return 1 - a; },       rule: "入力Aを反転（Bは使わない）" },
+    XOR:  { fn: function (a, b) { return a ^ b; },       rule: "1と0が違うときだけ1" },
+    NAND: { fn: function (a, b) { return 1 - (a & b); }, rule: "ANDの結果を反転" },
+    NOR:  { fn: function (a, b) { return 1 - (a | b); }, rule: "ORの結果を反転" }
+  };
+  var names = Object.keys(gates);
+  var current = "AND";
+  var a = 0, b = 0;
+
+  var swA = document.getElementById("sw-a");
+  var swB = document.getElementById("sw-b");
+  var gatesEl = document.getElementById("gates");
+  var diagram = document.getElementById("diagram");
+  var outEl = document.getElementById("out");
+  var ruleEl = document.getElementById("rule");
+  var truthBody = document.getElementById("truth-body");
+  var colHead = document.getElementById("col-head");
+
+  var NS = "http://www.w3.org/2000/svg";
+
+  // Gate buttons
+  var gateButtons = names.map(function (name) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "gate-btn";
+    btn.textContent = name;
+    btn.setAttribute("aria-pressed", "false");
+    btn.addEventListener("click", function () {
+      current = name;
+      render();
+    });
+    gatesEl.appendChild(btn);
+    return { name: name, button: btn };
+  });
+
+  // Truth table rows (A, B, Q for the selected gate)
+  var rows = [[0, 0], [0, 1], [1, 0], [1, 1]].map(function (pair) {
+    var tr = document.createElement("tr");
+    var tdA = document.createElement("td");
+    var tdB = document.createElement("td");
+    var tdQ = document.createElement("td");
+    tr.appendChild(tdA);
+    tr.appendChild(tdB);
+    tr.appendChild(tdQ);
+    truthBody.appendChild(tr);
+    return { tr: tr, tdA: tdA, tdB: tdB, tdQ: tdQ, a: pair[0], b: pair[1] };
+  });
+
+  function el(tag, attrs, text) {
+    var node = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  // Draw a simple circuit: two input wires, a gate body, one output wire.
+  function drawDiagram(name, aOn, bOn, qOn) {
+    while (diagram.firstChild) diagram.removeChild(diagram.firstChild);
+    var isNot = name === "NOT";
+    var bubble = name === "NAND" || name === "NOR" || isNot;
+
+    // Input labels and wires
+    diagram.appendChild(el("text", { x: 20, y: 60, class: "small" }, "A"));
+    diagram.appendChild(el("path", { d: "M 34 60 L 110 60", class: "wire" + (aOn ? " on" : "") }));
+    if (!isNot) {
+      diagram.appendChild(el("text", { x: 20, y: 150, class: "small" }, "B"));
+      diagram.appendChild(el("path", { d: "M 34 150 L 110 150", class: "wire" + (bOn ? " on" : "") }));
+    }
+
+    // Gate body (a rectangle keeps every gate readable at a glance)
+    diagram.appendChild(el("rect", { x: 110, y: 75, width: 120, height: 60, rx: 10, class: "body" }));
+    diagram.appendChild(el("text", { x: 170, y: 111, class: "label" }, name));
+
+    // Output bubble for inverting gates
+    var outStart = 230;
+    if (bubble) {
+      diagram.appendChild(el("circle", { cx: 238, cy: 105, r: 6, class: "body" }));
+      outStart = 244;
+    }
+    diagram.appendChild(el("path", { d: "M " + outStart + " 105 L 320 105", class: "wire" + (qOn ? " on" : "") }));
+    diagram.appendChild(el("text", { x: 336, y: 110, class: "small" }, "Q"));
+  }
+
+  function render() {
+    var g = gates[current];
+    var q = g.fn(a, b);
+
+    swA.textContent = "A = " + a;
+    swA.setAttribute("aria-pressed", a ? "true" : "false");
+    swB.textContent = "B = " + b;
+    swB.setAttribute("aria-pressed", b ? "true" : "false");
+    swB.disabled = current === "NOT";
+    swB.style.opacity = current === "NOT" ? "0.4" : "1";
+
+    gateButtons.forEach(function (item) {
+      item.button.setAttribute("aria-pressed", item.name === current ? "true" : "false");
+    });
+
+    outEl.textContent = String(q);
+    ruleEl.textContent = current + "：" + g.rule;
+
+    drawDiagram(current, a === 1, b === 1, q === 1);
+
+    colHead.textContent = current + " の出力";
+    rows.forEach(function (r) {
+      r.tdA.textContent = String(r.a);
+      r.tdB.textContent = String(r.b);
+      r.tdQ.textContent = String(g.fn(r.a, r.b));
+      r.tr.classList.toggle("current", r.a === a && (current === "NOT" || r.b === b));
+    });
+  }
+
+  swA.addEventListener("click", function () { a = 1 - a; render(); });
+  swB.addEventListener("click", function () { b = 1 - b; render(); });
+
+  render();
+})();
+</script>
